@@ -753,7 +753,13 @@ private func convert(_ value: NFCNDEFTag, _ completionHandler: @escaping (TagPig
 
   value.queryNDEFStatus { status, capacity, error in
     if let error = error {
-      completionHandler(nil, error)
+      // Even if queryNDEFStatus fails, still pass the tag to Flutter
+      // but mark it as not supporting NDEF
+      pigeon.ndef = NdefPigeon(
+        status: .notSupported,
+        capacity: 0
+      )
+      completionHandler(pigeon, nil)
       return
     }
     pigeon.ndef = NdefPigeon(
@@ -766,7 +772,10 @@ private func convert(_ value: NFCNDEFTag, _ completionHandler: @escaping (TagPig
     }
     value.readNDEF { message, error in
       if let error = error {
-        completionHandler(nil, error)
+        // Even if readNDEF fails (e.g., empty tag), still pass the tag
+        // with nil message to allow writing to empty tags
+        pigeon.ndef?.cachedNdefMessage = nil
+        completionHandler(pigeon, nil)
         return
       }
       if let message = message {
